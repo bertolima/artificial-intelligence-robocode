@@ -68,8 +68,6 @@ public class FatorIntegrante extends AdvancedRobot {
         setTurnRadarRightRadians(Utils.normalRelativeAngle(newRadarAngle));
     }
 
-
-<<<<<<< HEAD
     private void move(){
         Point2D.Double newPos = this.getMyNextPos();
         if (Functions.needNormalize(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight()))
@@ -78,7 +76,7 @@ public class FatorIntegrante extends AdvancedRobot {
 
             if (this.enemy.getDistance() < 200){
 
-=======
+
     //calcula posição em que eu quero posicionar o meu robo
     private Point2D.Double getMyNextPos(){
         double myNewX = getX();
@@ -105,7 +103,6 @@ public class FatorIntegrante extends AdvancedRobot {
         if (!this.enemy.none()){
 
             if (this.enemy.getDistance() < 200){
->>>>>>> 153c1c546c2a4d4b11d8465507ba64fc2be9808d
             }
             else this.goTo(newPos);
 
