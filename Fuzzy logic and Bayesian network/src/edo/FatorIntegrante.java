@@ -18,7 +18,6 @@ public class FatorIntegrante extends AdvancedRobot {
         X, Y, NEUTRAL, NONE
     }
 
-
     /* Variaveis de controle de ações do robo */
     private final double limitFromWall = 50d;
     private final double maxDistanceBetweenRobots = 100d;
@@ -59,40 +58,22 @@ public class FatorIntegrante extends AdvancedRobot {
         while (true) {
             execute();
             scan();
-            Point2D.Double newCoord = this.calculateMyNewCoords();
-            boolean flag = this.needNormalize(newCoord, this.marginFromWall);
-            if (flag) this.moveSet(this.normalizeCoords(newCoord, this.marginFromWall));
+            Point2D.Double newCoord = this.getMyNextPos();
+            boolean flag = Functions.needNormalize(newCoord, this.marginFromWall, getBattleFieldWidth(), getBattleFieldHeight());
+            if (flag) this.moveSet(Functions.normalizeCoords(newCoord, this.marginFromWall, getBattleFieldWidth(), getBattleFieldHeight()));
             else this.moveSet(newCoord);
         }
     }
 
-    public void onScannedRobot (ScannedRobotEvent ev) {
-        if (this.enemy.none() || ev.getName().equals(enemy.getName())) enemy.update(ev);
-        this.calculateEnemyCoords();
-        this.lockIn();
-        this.chooseTargeting();
-    }
-
-    public void onCustomEvent(CustomEvent e) {
-
-    }
-
-    public void onRobotDeath(RobotDeathEvent event){
-        this.enemy.reset();
-        setTurnRadarRight (Double.POSITIVE_INFINITY);
-    }
-
-    public void onBulletHit(BulletHitEvent b){
-        this.hits++;
-        this.totalShots++;
-    }
-
-    public void onBulletMissed(BulletMissedEvent b){
-        this.totalShots++;
+    //fixa a mira em um robo especifico
+    public void lockIn (){
+        this.angleToEnemy = this.getHeadingRadians() + this.enemy.getBearingRadians();
+        this.newRadarAngle = this.angleToEnemy - this.getRadarHeadingRadians();
+        setTurnRadarRightRadians(Utils.normalRelativeAngle(newRadarAngle));
     }
 
     //calcula posição atual do robo inimigo
-    private void calculateEnemyCoords(){
+    private void getEnemyPos(){
         this.enemy.setPrevCoord(this.enemy.getX(), this.enemy.getY());
         this.myPrevCoord.setLocation(getX(), getY());
         double enemyX = getX() + this.enemy.getDistance() * Math.sin(this.angleToEnemy);
@@ -100,8 +81,8 @@ public class FatorIntegrante extends AdvancedRobot {
         this.enemy.setCoord(enemyX, enemyY);
     }
 
-    //calcula posição em que eu quero posicionar o meu robo com base no robo inimigo
-    private Point2D.Double calculateMyNewCoords(){
+    //calcula posição em que eu quero posicionar o meu robo
+    private Point2D.Double getMyNextPos(){
         double myNewX = getX();
         double myNewY = getY();
         if (!this.enemy.none()) {
@@ -111,26 +92,7 @@ public class FatorIntegrante extends AdvancedRobot {
         return new Point2D.Double(myNewX, myNewY);
     }
 
-    //normaliza uma coordenada para que o robo nao colida com as paredes
-    private Point2D.Double normalizeCoords(Point2D.Double p, double offset){
-        p.x = Math.min(Math.max(18.0 + offset, p.x), getBattleFieldWidth() - 18.0 - offset);
-        p.y = Math.min(Math.max(18.0 + offset, p.y), getBattleFieldHeight() - 18.0 - offset);
-        return p;
-    }
 
-    private boolean needNormalize(Point2D.Double p, double offset){
-        return (p.x < 18.0 + offset
-                || p.y < 18.0 + offset
-                || p.x > getBattleFieldWidth() - 18.0 - offset
-                || p.y > getBattleFieldHeight() - 18.0 - offset);
-    }
-
-    //fixa a mira em um robo especifico
-    public void lockIn (){
-        this.angleToEnemy = this.getHeadingRadians() + this.enemy.getBearingRadians();
-        this.newRadarAngle = this.angleToEnemy - this.getRadarHeadingRadians();
-        setTurnRadarRightRadians(Utils.normalRelativeAngle(newRadarAngle));
-    }
 
     private void goTo(Point2D.Double coord) {
         coord.x = coord.x - this.getX();
@@ -142,7 +104,7 @@ public class FatorIntegrante extends AdvancedRobot {
 
     private void circularMove(){
         this.setTurnRight(this.enemy.getBearing() + this.angleBeetweenEnemy);
-        if (predictMyCircularMove(50)) setAhead(50);
+
         else setBack(50);
     }
 
@@ -201,8 +163,8 @@ public class FatorIntegrante extends AdvancedRobot {
             newCoords.y += Math.cos(currentHeading) * speed;
             currentHeading += diffHeading;
 
-            if (this.needNormalize(newCoords, 0)){
-                newCoords.setLocation(this.normalizeCoords(newCoords, 0));
+            if (Functions.needNormalize(newCoords, 0, getBattleFieldWidth(), getBattleFieldHeight())){
+                newCoords.setLocation(Functions.normalizeCoords(newCoords, 0, getBattleFieldWidth(), getBattleFieldHeight()));
                 break;
             }
         }
@@ -259,32 +221,29 @@ public class FatorIntegrante extends AdvancedRobot {
         return Math.min(this.enemy.getEnergy()/4, fp);
     }
 
-    public boolean predictMyCircularMove(double distance){
-        double speed = this.getVelocity();
-        double time = distance / speed;
+    public void onScannedRobot (ScannedRobotEvent ev) {
+        if (this.enemy.none() || ev.getName().equals(enemy.getName())) enemy.update(ev);
+        this.getEnemyPos();
+        this.lockIn();
+        this.chooseTargeting();
+    }
 
-        Point2D.Double p = new Point2D.Double(getX(), getY());
-        double delta = 0d;
-        double heading = this.getHeadingRadians();
-        double prevHeading = 0d;
-        double diffHeading = 0d;
-        while (Math.abs((++delta) * speed) < distance){
-            if (Utils.isNear(getTime() % 16, 0d)) this.direction *= -1;
-            if (direction == -1) return false;
-            if (Utils.isNear(speed, 0d)) return false;
-            p.x += Math.cos(heading) * speed;
-            p.y += Math.sin(heading) * speed;
-            diffHeading = heading - prevHeading;
-            prevHeading = heading;
-            heading += diffHeading;
+    public void onCustomEvent(CustomEvent e) {
 
-            out.println(heading + "  " + diffHeading + " " + prevHeading);
-            out.println("distance: " + delta*speed + " " + delta + " " + speed);
-            if (needNormalize(p, 0d)) return false;
-        }
-        if (needNormalize(p, 0d)) return false;
-        return true;
+    }
 
+    public void onRobotDeath(RobotDeathEvent event){
+        this.enemy.reset();
+        setTurnRadarRight (Double.POSITIVE_INFINITY);
+    }
+
+    public void onBulletHit(BulletHitEvent b){
+        this.hits++;
+        this.totalShots++;
+    }
+
+    public void onBulletMissed(BulletMissedEvent b){
+        this.totalShots++;
     }
 
 }
