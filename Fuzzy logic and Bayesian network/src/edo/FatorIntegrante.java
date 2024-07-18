@@ -68,6 +68,7 @@ public class FatorIntegrante extends AdvancedRobot {
         setTurnRadarRightRadians(Utils.normalRelativeAngle(newRadarAngle));
     }
 
+
     private void move(){
         Point2D.Double newPos = this.getMyNextPos();
         if (Functions.needNormalize(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight()))
@@ -76,33 +77,6 @@ public class FatorIntegrante extends AdvancedRobot {
 
             if (this.enemy.getDistance() < 200){
 
-
-    //calcula posição em que eu quero posicionar o meu robo
-    private Point2D.Double getMyNextPos(){
-        double myNewX = getX();
-        double myNewY = getY();
-        if (!this.enemy.none()) {
-            myNewX = this.enemy.getX() + Math.cos(angleBeetweenEnemy) * maxDistanceBetweenRobots;
-            myNewY = this.enemy.getY() + Math.sin(angleBeetweenEnemy) * maxDistanceBetweenRobots;
-        }
-        return new Point2D.Double(myNewX, myNewY);
-    }
-
-
-
-    private void goTo(Point2D.Double coord) {
-        coord.x = coord.x - this.getX();
-        coord.y = coord.y - this.getY();
-        double goAngle = Utils.normalRelativeAngle(Math.atan2(coord.x, coord.y) - this.getHeadingRadians());
-        setTurnRightRadians(Math.atan(Math.tan(goAngle)));
-        setAhead(Math.cos(goAngle) * Math.hypot(coord.x, coord.y));
-    }
-
-
-    private void moveSet(Point2D.Double coord){
-        if (!this.enemy.none()){
-
-            if (this.enemy.getDistance() < 200){
             }
             else this.goTo(newPos);
 
