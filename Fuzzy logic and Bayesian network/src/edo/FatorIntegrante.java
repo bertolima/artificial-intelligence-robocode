@@ -102,17 +102,11 @@ public class FatorIntegrante extends AdvancedRobot {
         setAhead(Math.cos(goAngle) * Math.hypot(coord.x, coord.y));
     }
 
-    private void circularMove(){
-        this.setTurnRight(this.enemy.getBearing() + this.angleBeetweenEnemy);
-
-        else setBack(50);
-    }
 
     private void moveSet(Point2D.Double coord){
         if (!this.enemy.none()){
 
             if (this.enemy.getDistance() < 200){
-                this.circularMove();
             }
             else this.goTo(coord);
 
