@@ -21,7 +21,7 @@ public class FatorIntegrante extends AdvancedRobot {
     /* Variaveis de controle de ações do robo */
     private final double limitFromWall = 50d;
     private final double maxDistanceBetweenRobots = 100d;
-    private final double marginFromWall = 10d;
+    private final double wallDistanceLimit = 30d;
     private final double angleBeetweenEnemy = 90d;
     private final double circularSpeed = 100d;
     private Point2D.Double myCoord;
@@ -54,14 +54,10 @@ public class FatorIntegrante extends AdvancedRobot {
         });
         setTurnRadarRight(Double.POSITIVE_INFINITY);
         this.myCoord = new Point2D.Double(getX(), getY());
-
         while (true) {
             execute();
             scan();
-            Point2D.Double newCoord = this.getMyNextPos();
-            boolean flag = Functions.needNormalize(newCoord, this.marginFromWall, getBattleFieldWidth(), getBattleFieldHeight());
-            if (flag) this.moveSet(Functions.normalizeCoords(newCoord, this.marginFromWall, getBattleFieldWidth(), getBattleFieldHeight()));
-            else this.moveSet(newCoord);
+            move();
         }
     }
 
@@ -72,55 +68,23 @@ public class FatorIntegrante extends AdvancedRobot {
         setTurnRadarRightRadians(Utils.normalRelativeAngle(newRadarAngle));
     }
 
-    //calcula posição atual do robo inimigo
-    private void getEnemyPos(){
-        this.enemy.setPrevCoord(this.enemy.getX(), this.enemy.getY());
-        this.myPrevCoord.setLocation(getX(), getY());
-        double enemyX = getX() + this.enemy.getDistance() * Math.sin(this.angleToEnemy);
-        double enemyY = getY() + this.enemy.getDistance() * Math.cos(this.angleToEnemy);
-        this.enemy.setCoord(enemyX, enemyY);
-    }
 
-    //calcula posição em que eu quero posicionar o meu robo
-    private Point2D.Double getMyNextPos(){
-        double myNewX = getX();
-        double myNewY = getY();
-        if (!this.enemy.none()) {
-            myNewX = this.enemy.getX() + Math.cos(angleBeetweenEnemy) * maxDistanceBetweenRobots;
-            myNewY = this.enemy.getY() + Math.sin(angleBeetweenEnemy) * maxDistanceBetweenRobots;
-        }
-        return new Point2D.Double(myNewX, myNewY);
-    }
-
-
-
-    private void goTo(Point2D.Double coord) {
-        coord.x = coord.x - this.getX();
-        coord.y = coord.y - this.getY();
-        double goAngle = Utils.normalRelativeAngle(Math.atan2(coord.x, coord.y) - this.getHeadingRadians());
-        setTurnRightRadians(Math.atan(Math.tan(goAngle)));
-        setAhead(Math.cos(goAngle) * Math.hypot(coord.x, coord.y));
-    }
-
-    private void circularMove(){
-        this.setTurnRight(this.enemy.getBearing() + this.angleBeetweenEnemy);
-
-        else setBack(50);
-    }
-
-    private void moveSet(Point2D.Double coord){
+    private void move(){
+        Point2D.Double newPos = this.getMyNextPos();
+        if (Functions.needNormalize(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight()))
+            newPos = Functions.normalizeCoords(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight());
         if (!this.enemy.none()){
 
             if (this.enemy.getDistance() < 200){
-                this.circularMove();
+
             }
-            else this.goTo(coord);
+            else this.goTo(newPos);
 
         }
     }
 
     private void chooseTargeting(){
-        double firePower = calculateFirePower();
+        double firePower = Functions.calculateFirePower(getEnergy(), this.enemy.getDistance(), this.enemy.getEnergy());
         double currentHeading = this.enemy.getHeadingRadians();
         double headingDiff = currentHeading - this.enemy.getPrevHeadingRadians();
         this.enemy.setPrevHeadingRadians(currentHeading);
@@ -155,39 +119,39 @@ public class FatorIntegrante extends AdvancedRobot {
 
 
     private Point2D predictCircularMove(Point2D p, double speed, double currentHeading, double diffHeading, double time, double firePower){
-        Point2D.Double newCoords = new Point2D.Double(p.getX(), p.getY());
+        Point2D.Double newPos = new Point2D.Double(p.getX(), p.getY());
         double delta = 0d;
-        while ((++delta) * time < Point2D.Double.distance(getX(), getY(), newCoords.x, newCoords.y)){
+        while ((++delta) * time < Point2D.Double.distance(getX(), getY(), newPos.x, newPos.y)){
 
-            newCoords.x += Math.sin(currentHeading) * speed;
-            newCoords.y += Math.cos(currentHeading) * speed;
+            newPos.x += Math.sin(currentHeading) * speed;
+            newPos.y += Math.cos(currentHeading) * speed;
             currentHeading += diffHeading;
 
-            if (Functions.needNormalize(newCoords, 0, getBattleFieldWidth(), getBattleFieldHeight())){
-                newCoords.setLocation(Functions.normalizeCoords(newCoords, 0, getBattleFieldWidth(), getBattleFieldHeight()));
+            if (Functions.needNormalize(newPos, 0, getBattleFieldWidth(), getBattleFieldHeight())){
+                newPos.setLocation(Functions.normalizeCoords(newPos, 0, getBattleFieldWidth(), getBattleFieldHeight()));
                 break;
             }
         }
-        return newCoords;
+        return newPos;
     }
 
     public Point2D.Double linearTargeting(double bulletTime){
-        Point2D.Double newCoords = new Point2D.Double(this.enemy.getX(), this.enemy.getY());
+        Point2D.Double newPos = new Point2D.Double(this.enemy.getX(), this.enemy.getY());
         Axis axis = determineLinearMovement();
         double projection = 2 * (this.enemy.getVelocity() * bulletTime);
 
         if (this.signal.equals(Signal.MINUS)) projection *= -1;
 
         if (axis.equals(Axis.X)) {
-            newCoords.setLocation(newCoords.getX() + projection, newCoords.getY());
+            newPos.setLocation(newPos.getX() + projection, newPos.getY());
         } else if (axis.equals(Axis.Y)) {
-            newCoords.setLocation(newCoords.getX(), newCoords.getY() + projection);
+            newPos.setLocation(newPos.getX(), newPos.getY() + projection);
         } else if(axis.equals(Axis.NEUTRAL)){
-            newCoords.setLocation(newCoords.getX() + Math.cos(this.enemy.getHeading())*projection,
-                    newCoords.getY()+ Math.sin(this.enemy.getHeading())*projection);
+            newPos.setLocation(newPos.getX() + Math.cos(this.enemy.getHeading())*projection,
+                    newPos.getY()+ Math.sin(this.enemy.getHeading())*projection);
         }
         this.signal = Signal.NONE;
-        return newCoords;
+        return newPos;
     }
 
     public Axis determineLinearMovement(){
@@ -212,13 +176,30 @@ public class FatorIntegrante extends AdvancedRobot {
         }
     }
 
-    public double calculateFirePower(){
-        double fp;
-        if (this.getEnergy() < 10d) fp = 0.1d;
-        else if(this.enemy.getDistance() > 400) fp = 1.5d;
-        else if (this.enemy.getDistance() < 200) fp = 3d;
-        else fp = 2d;
-        return Math.min(this.enemy.getEnergy()/4, fp);
+    //calcula posição atual do robo inimigo
+    private void getEnemyPos(){
+        this.enemy.setPrevCoord(this.enemy.getX(), this.enemy.getY());
+        this.myPrevCoord.setLocation(getX(), getY());
+        double enemyX = getX() + this.enemy.getDistance() * Math.sin(this.angleToEnemy);
+        double enemyY = getY() + this.enemy.getDistance() * Math.cos(this.angleToEnemy);
+        this.enemy.setCoord(enemyX, enemyY);
+    }
+
+    //calcula posição em que eu quero posicionar o meu robo
+    private Point2D.Double getMyNextPos(){
+        Point2D.Double newPos = new Point2D.Double(getX(), getY());
+        if (!this.enemy.none()) {
+            Functions.calculateNextPosition(newPos, this.enemy.getCoord(), angleToEnemy, maxDistanceBetweenRobots);
+        }
+        return newPos;
+    }
+
+    private void goTo(Point2D.Double coord) {
+        coord.x = coord.x - this.getX();
+        coord.y = coord.y - this.getY();
+        double goAngle = Utils.normalRelativeAngle(Math.atan2(coord.x, coord.y) - this.getHeadingRadians());
+        setTurnRightRadians(Math.atan(Math.tan(goAngle)));
+        setAhead(Math.cos(goAngle) * Math.hypot(coord.x, coord.y));
     }
 
     public void onScannedRobot (ScannedRobotEvent ev) {
