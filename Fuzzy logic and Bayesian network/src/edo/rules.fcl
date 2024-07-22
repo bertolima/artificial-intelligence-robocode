@@ -1,0 +1,100 @@
+FUNCTION_BLOCK getFirePower
+VAR_INPUT				// Definição das variáveis de entrada
+	distance : REAL;
+	enemyEnergy : REAL;
+	energy : REAL;
+END_VAR
+
+VAR_OUTPUT				// Definir a variável de saída
+	firePower : REAL;		// 0 à 3
+END_VAR
+
+FUZZIFY distance	// Variáveis de entrada para Fuzzify 'distance': {'near', 'regular' , 'far'}
+	TERM near := trape 0 0 150 300; 
+	TERM regular := trape 175 250 450 600;
+	TERM far := trape 475 550 2000 2000;
+END_FUZZIFY
+
+FUZZIFY enemyEnergy	//  Variáveis de entrada para Fuzzify 'enemyEnergy': { 'low', 'regular', 'high' }
+	TERM low := trape 0 0 20 40;
+	TERM regular := trape 25 40 60 70;
+	TERM high := trape 60 70 200 200;
+END_FUZZIFY
+
+FUZZIFY energy	// Variáveis de entrada para Fuzzify  'energy': { 'low', 'regular', 'high' }
+	TERM low := trape 0 0 20 40;
+	TERM regular := trape 25 40 60 70;
+	TERM high := trape 60 70 200 200;
+END_FUZZIFY
+
+DEFUZZIFY firePower			// Variável de saída Defuzzify 'firePower' : {'weak', 'regular', 'strong' }
+	TERM weak := trape 0.01 0.1 0.5 1.5;
+	TERM regular := trape 1 1.5 2 2.5;
+	TERM strong := trape 2 2.5 3 3;
+	METHOD : COG;		// Método 'Centro da gravidade'
+	DEFAULT := 1;		// Valor default 1 (se nenhuma das regras ativar o defuzzifier)
+END_DEFUZZIFY
+
+RULEBLOCK No1
+	AND : MIN;			// É comum utilizar o método MIN para o operador AND, e o método MAX para o operador OR.
+	ACT : MIN;			// Use 'min' activation method
+	ACCU : MAX;			// Use 'max' accumulation method
+
+	RULE 1 : IF distance IS near AND NOT energy IS low THEN firePower IS strong;
+	RULE 2 : IF distance IS near AND energy IS low THEN firePower IS regular;
+	RULE 3 : IF distance IS regular AND energy IS low THEN firePower IS weak;
+	RULE 4 : IF distance IS regular AND energy IS regular THEN firePower IS regular;
+	RULE 5 : IF distance IS regular AND energy IS high AND NOT energy IS high THEN firePower IS strong;
+	RULE 6 : IF distance IS far AND energy IS high OR energy IS low THEN firePower IS regular;
+	RULE 7 : IF distance IS far THEN firePower IS weak; 
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK getDistanceStatus
+VAR_INPUT
+	distance : REAL;
+	energy : REAL;
+END_VAR
+
+VAR_OUTPUT
+	scale : REAL;
+END_VAR
+
+FUZZIFY distance
+	TERM near := trape 0 50 200 350;
+	TERM regular := trape 200 300 400 500;
+	TERM far := trape 450 550 2000 2000;
+END_FUZZIFY
+
+FUZZIFY energy	// Variáveis de entrada para Fuzzify  'energy': { 'low', 'regular', 'high' }
+	TERM low := trape 0 0 20 40;
+	TERM regular := trape 25 40 60 70;
+	TERM high := trape 60 70 200 200;
+END_FUZZIFY
+
+DEFUZZIFY scale
+	TERM veryPrecaution := trape 0 0.1 0.2 0.25;
+	TERM precaution := trape 0.2 0.35 0.45 0.5;
+	TERM regular := trape 0.4 0.5 0.5 0.6;
+	TERM agressive := trape 0.55 0.65 0.7 0.75;
+	TERM veryAgressive := trape 0.7 0.8 1 1;
+	METHOD : COG;
+	DEFAULT := 0.5;
+END_DEFUZZIFY
+
+RULEBLOCK No1
+	AND : MIN;			// É comum utilizar o método MIN para o operador AND, e o método MAX para o operador OR.
+	ACT : MIN;			// Use 'min' activation method
+	ACCU : MAX;			// Use 'max' accumulation method
+
+	RULE 1 : IF distance IS near AND energy IS high THEN scale IS veryAgressive;
+	RULE 2 : IF distance IS near AND energy IS regular THEN scale IS agressive;
+	RULE 3 : IF distance IS near AND energy IS low THEN scale IS veryPrecaution;
+	RULE 4 : IF distance IS regular AND energy IS low THEN scale IS precaution;
+	RULE 5 : IF distance IS regular AND energy IS NOT low THEN scale IS agressive;
+	RULE 6 : IF distance IS far AND energy IS NOT high AND energy IS NOT regular THEN scale IS regular;
+	RULE 7 : IF distance IS far AND energy IS high THEN scale IS veryAgressive;
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
