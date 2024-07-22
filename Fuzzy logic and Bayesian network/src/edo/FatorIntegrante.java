@@ -8,9 +8,18 @@ import robocode.util.Utils;
 import java.awt.*;
 import java.awt.geom.Point2D;
 
-public class FatorIntegrante extends AdvancedRobot {
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.security.AccessController;
 
-    enum Signal {
+import net.sourceforge.jFuzzyLogic.FIS;
+import net.sourceforge.jFuzzyLogic.FunctionBlock;
+import net.sourceforge.jFuzzyLogic.plot.JFuzzyChart;
+
+public class FatorIntegrante extends AdvancedRobot {
+    final static String fclFileName = "/home/luis/IdeaProjects/Fuzzy logic and Bayesian network/src/edo/rules.fcl";
+
+        enum Signal {
         PLUS, MINUS, NEUTRAL, NONE
     }
 
@@ -42,9 +51,21 @@ public class FatorIntegrante extends AdvancedRobot {
     private double totalShots = 0d;
     private double hits = 0d;
 
+    private FunctionBlock firePowerFunction;
+    FIS fis = null;
 
     public void run() {
+        System.out.println("Working Directory = " + System.getProperty("user.dir"));
+
         setColors(Color.BLACK, Color.RED, Color.RED, Color.black, Color.GREEN);
+        fis = FIS.load(fclFileName);
+
+        if( fis == null ) {
+            System.err.println("Erro ao carregar arquivo: '" + fclFileName + "'");
+            return;
+        }
+
+        firePowerFunction = fis.getFunctionBlock("getFirePower");
         setAdjustRadarForGunTurn(true);
         setAdjustRadarForRobotTurn(true);
         setAdjustGunForRobotTurn(true);
@@ -83,25 +104,16 @@ public class FatorIntegrante extends AdvancedRobot {
         }
     }
 
-    private void chooseTargeting(){
-        double firePower = Functions.calculateFirePower(getEnergy(), this.enemy.getDistance(), this.enemy.getEnergy());
+    private void shoot(){
+        double firePower = Functions.calculateFirePower(firePowerFunction, this.enemy.getDistance(), getEnergy(), this.enemy.getEnergy());
         double currentHeading = this.enemy.getHeadingRadians();
         double headingDiff = currentHeading - this.enemy.getPrevHeadingRadians();
         this.enemy.setPrevHeadingRadians(currentHeading);
-
         double bulletSpeed = Rules.getBulletSpeed(firePower);
         double travellingBulletTime;
 
-        Point2D.Double target;
+        Point2D.Double target = Functions.getTargetPosition(new Point2D.Double(getX(), getY()), enemy.getCoord(), new Point2D.Double(getBattleFieldWidth(), getBattleFieldHeight()), enemy)
 
-        if (Math.abs(headingDiff) > 0.01d){
-            travellingBulletTime  = this.enemy.getDistance()/bulletSpeed;
-            target = (Point2D.Double) this.predictCircularMove(this.enemy.getCoord(), this.enemy.getVelocity(), currentHeading, headingDiff, travellingBulletTime, firePower);
-        }
-        else{
-            travellingBulletTime = (this.enemy.getDistance() + this.enemy.getPrevDistance())/bulletSpeed;
-            target = linearTargeting(travellingBulletTime);
-        }
 
         double currentAngle = Math.atan2(this.enemy.getY()-this.getY(), this.enemy.getX()-this.getX());
         double futureAngle = Math.atan2(target.getY()-this.getY(), target.getX()-this.getX());
@@ -116,64 +128,6 @@ public class FatorIntegrante extends AdvancedRobot {
         this.accourate = this.totalShots/this.hits;
     }
 
-
-    private Point2D predictCircularMove(Point2D p, double speed, double currentHeading, double diffHeading, double time, double firePower){
-        Point2D.Double newPos = new Point2D.Double(p.getX(), p.getY());
-        double delta = 0d;
-        while ((++delta) * time < Point2D.Double.distance(getX(), getY(), newPos.x, newPos.y)){
-
-            newPos.x += Math.sin(currentHeading) * speed;
-            newPos.y += Math.cos(currentHeading) * speed;
-            currentHeading += diffHeading;
-
-            if (Functions.needNormalize(newPos, 0, getBattleFieldWidth(), getBattleFieldHeight())){
-                newPos.setLocation(Functions.normalizeCoords(newPos, 0, getBattleFieldWidth(), getBattleFieldHeight()));
-                break;
-            }
-        }
-        return newPos;
-    }
-
-    public Point2D.Double linearTargeting(double bulletTime){
-        Point2D.Double newPos = new Point2D.Double(this.enemy.getX(), this.enemy.getY());
-        Axis axis = determineLinearMovement();
-        double projection = 2 * (this.enemy.getVelocity() * bulletTime);
-
-        if (this.signal.equals(Signal.MINUS)) projection *= -1;
-
-        if (axis.equals(Axis.X)) {
-            newPos.setLocation(newPos.getX() + projection, newPos.getY());
-        } else if (axis.equals(Axis.Y)) {
-            newPos.setLocation(newPos.getX(), newPos.getY() + projection);
-        } else if(axis.equals(Axis.NEUTRAL)){
-            newPos.setLocation(newPos.getX() + Math.cos(this.enemy.getHeading())*projection,
-                    newPos.getY()+ Math.sin(this.enemy.getHeading())*projection);
-        }
-        this.signal = Signal.NONE;
-        return newPos;
-    }
-
-    public Axis determineLinearMovement(){
-        Point2D.Double coordDiff = new Point2D.Double(this.enemy.getX() - this.enemy.getPrevCoord().getX(),
-                this.enemy.getY() - this.enemy.getPrevCoord().getY());
-        this.enemy.setPrevDistance(this.enemy.getCoord().distance(this.enemy.getPrevCoord()));
-        this.distanceBeetweenMyCoords = this.myPrevCoord.distance(getX(), getY());
-        if (Math.abs(Math.abs(coordDiff.x) - Math.abs(coordDiff.y)) > this.enemy.getPrevDistance()/2){
-            if (Math.max(Math.abs(coordDiff.x), Math.abs(coordDiff.y)) == Math.abs(coordDiff.x)){
-                if (coordDiff.x < 0) this.signal = Signal.MINUS;
-                else this.signal = Signal.PLUS;
-                return Axis.X;
-            }
-            else{
-                if (coordDiff.y < 0) this.signal = Signal.MINUS;
-                else this.signal = Signal.PLUS;
-                return Axis.Y;
-            }
-        } else{
-            this.signal = Signal.NEUTRAL;
-            return Axis.NEUTRAL;
-        }
-    }
 
     //calcula posição atual do robo inimigo
     private void getEnemyPos(){
@@ -205,7 +159,7 @@ public class FatorIntegrante extends AdvancedRobot {
         if (this.enemy.none() || ev.getName().equals(enemy.getName())) enemy.update(ev);
         this.getEnemyPos();
         this.lockIn();
-        this.chooseTargeting();
+        this.shoot();
     }
 
     public void onCustomEvent(CustomEvent e) {
