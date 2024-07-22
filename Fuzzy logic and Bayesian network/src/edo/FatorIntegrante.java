@@ -106,14 +106,13 @@ public class FatorIntegrante extends AdvancedRobot {
 
     private void shoot(){
         double firePower = Functions.calculateFirePower(firePowerFunction, this.enemy.getDistance(), getEnergy(), this.enemy.getEnergy());
+
         double currentHeading = this.enemy.getHeadingRadians();
         double headingDiff = currentHeading - this.enemy.getPrevHeadingRadians();
         this.enemy.setPrevHeadingRadians(currentHeading);
-        double bulletSpeed = Rules.getBulletSpeed(firePower);
-        double travellingBulletTime;
+        double bulletTravelTime = enemy.getDistance()/Rules.getBulletSpeed(firePower);;
 
-        Point2D.Double target = Functions.getTargetPosition(new Point2D.Double(getX(), getY()), enemy.getCoord(), new Point2D.Double(getBattleFieldWidth(), getBattleFieldHeight()), enemy)
-
+        Point2D.Double target = Functions.getTargetPosition(new Point2D.Double(getX(), getY()), enemy, new Point2D.Double(getBattleFieldWidth(), getBattleFieldHeight()), currentHeading, headingDiff, bulletTravelTime);
 
         double currentAngle = Math.atan2(this.enemy.getY()-this.getY(), this.enemy.getX()-this.getX());
         double futureAngle = Math.atan2(target.getY()-this.getY(), target.getX()-this.getX());
