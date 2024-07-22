@@ -1,5 +1,6 @@
 package edo;
 
+import Enemy.EnemyBot;
 import net.sourceforge.jFuzzyLogic.FunctionBlock;
 
 import java.awt.geom.Point2D;
@@ -48,66 +49,61 @@ public class Functions {
         return firePower.getVariable("firePower").getValue();
     }
 
-    public static Point2D.Double getTargetPosition(Point2D.Double myPos, Point2D.Double enemyPos, Point2D.Double battleSize, double enemySpeed, double enemyCurrentHeading, double headingDif, double bulletTravelTime, double firePower){
-        if (Math.abs(headingDif) > 0.01d) return predictCircularMove(enemyPos, enemySpeed, enemyCurrentHeading, headingDif, bulletTravelTime, firePower);
-        return linearTargeting(bulletTravelTime);
+    public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime){
+        if (Math.abs(headingDif) > 0.01d) return predictCircularMove(myPos, enemy.getCoord(), battleSize, enemy.getVelocity(), enemyCurrentHeading, headingDif, bulletTravelTime);
+        return linearTargeting(enemy, enemy.getVelocity() * bulletTravelTime);
     }
 
-    private Point2D predictCircularMove(Point2D p, double speed, double currentHeading, double diffHeading, double time, double firePower){
-        Point2D.Double newPos = new Point2D.Double(p.getX(), p.getY());
+    private static Point2D.Double predictCircularMove(Point2D myPos, Point2D enemyPos, Point2D.Double battleSize, double speed, double currentHeading, double diffHeading, double time){
+        Point2D.Double newPos = new Point2D.Double(enemyPos.getX(), enemyPos.getY());
         double delta = 0d;
-        while ((++delta) * time < Point2D.Double.distance(getX(), getY(), newPos.x, newPos.y)){
+        while ((++delta) * time < Point2D.Double.distance(myPos.getX(), myPos.getX(), newPos.x, newPos.y)){
 
             newPos.x += Math.sin(currentHeading) * speed;
             newPos.y += Math.cos(currentHeading) * speed;
             currentHeading += diffHeading;
 
-            if (Functions.needNormalize(newPos, 0, getBattleFieldWidth(), getBattleFieldHeight())){
-                newPos.setLocation(Functions.normalizeCoords(newPos, 0, getBattleFieldWidth(), getBattleFieldHeight()));
+            if (needNormalize(newPos, 0, battleSize.getX(), battleSize.getY())){
+                newPos.setLocation(Functions.normalizeCoords(newPos, 0, battleSize.getX(), battleSize.getY()));
                 break;
             }
         }
         return newPos;
     }
 
-    private Point2D.Double linearTargeting(double bulletTime){
-        Point2D.Double newPos = new Point2D.Double(this.enemy.getX(), this.enemy.getY());
-        FatorIntegrante.Axis axis = determineLinearMovement();
-        double projection = 2 * (this.enemy.getVelocity() * bulletTime);
+    private static Point2D.Double linearTargeting(EnemyBot enemy, double enemyDistance){
+        Point2D.Double newPos = new Point2D.Double(enemy.getX(), enemy.getY());
+        byte[] ans = determineLinearMovement(enemy);
+        double projection = 2 * enemyDistance;
 
-        if (this.signal.equals(FatorIntegrante.Signal.MINUS)) projection *= -1;
+        if (ans[1] == -1) projection *= -1;
 
-        if (axis.equals(FatorIntegrante.Axis.X)) {
-            newPos.setLocation(newPos.getX() + projection, newPos.getY());
-        } else if (axis.equals(FatorIntegrante.Axis.Y)) {
-            newPos.setLocation(newPos.getX(), newPos.getY() + projection);
-        } else if(axis.equals(FatorIntegrante.Axis.NEUTRAL)){
-            newPos.setLocation(newPos.getX() + Math.cos(this.enemy.getHeading())*projection,
-                    newPos.getY()+ Math.sin(this.enemy.getHeading())*projection);
-        }
-        this.signal = FatorIntegrante.Signal.NONE;
+        if (ans[0] == 1) newPos.setLocation(newPos.getX() + projection, newPos.getY());
+        else if (ans[0] == -1) newPos.setLocation(newPos.getX(), newPos.getY() + projection);
+        else newPos.setLocation(newPos.getX() + Math.cos(enemy.getHeading())*projection,
+                    newPos.getY()+ Math.sin(enemy.getHeading())*projection);
+
         return newPos;
     }
 
-    private FatorIntegrante.Axis determineLinearMovement(){
-        Point2D.Double coordDiff = new Point2D.Double(this.enemy.getX() - this.enemy.getPrevCoord().getX(),
-                this.enemy.getY() - this.enemy.getPrevCoord().getY());
-        this.enemy.setPrevDistance(this.enemy.getCoord().distance(this.enemy.getPrevCoord()));
-        this.distanceBeetweenMyCoords = this.myPrevCoord.distance(getX(), getY());
-        if (Math.abs(Math.abs(coordDiff.x) - Math.abs(coordDiff.y)) > this.enemy.getPrevDistance()/2){
-            if (Math.max(Math.abs(coordDiff.x), Math.abs(coordDiff.y)) == Math.abs(coordDiff.x)){
-                if (coordDiff.x < 0) this.signal = FatorIntegrante.Signal.MINUS;
-                else this.signal = FatorIntegrante.Signal.PLUS;
-                return FatorIntegrante.Axis.X;
+    private static byte[] determineLinearMovement(EnemyBot enemy){
+        Point2D.Double diffPos = new Point2D.Double(enemy.getX() - enemy.getPrevCoord().getX(),
+                enemy.getY() - enemy.getPrevCoord().getY());
+        enemy.setPrevDistance(enemy.getCoord().distance(enemy.getPrevCoord()));
+        byte[] ans = {0,0};
+        if (Math.abs(Math.abs(diffPos.x) - Math.abs(diffPos.y)) > enemy.getPrevDistance()/2){
+            if (Math.max(Math.abs(diffPos.x), Math.abs(diffPos.y)) == Math.abs(diffPos.x)){
+                if (diffPos.x < 0) ans[1] = -1;
+                else ans[1] = 1;;
+                ans[0] = 1;
             }
             else{
-                if (coordDiff.y < 0) this.signal = FatorIntegrante.Signal.MINUS;
-                else this.signal = FatorIntegrante.Signal.PLUS;
-                return FatorIntegrante.Axis.Y;
+                if (diffPos.y < 0) ans[1] = -1;
+                else ans[1] = 1;
+                ans[0] = -1;
             }
-        } else{
-            this.signal = FatorIntegrante.Signal.NEUTRAL;
-            return FatorIntegrante.Axis.NEUTRAL;
         }
+        
+        return ans;
     }
 }
