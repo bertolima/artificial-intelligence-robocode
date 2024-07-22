@@ -105,7 +105,6 @@ public class FatorIntegrante extends AdvancedRobot {
 
         double currentAngle = Math.atan2(this.enemy.getY()-this.getY(), this.enemy.getX()-this.getX());
         double futureAngle = Math.atan2(target.getY()-this.getY(), target.getX()-this.getX());
-
         //double angle =  Utils.normalAbsoluteAngle(Math.atan2(target.x - getX(), target.y - getY()));
 
         this.projection = futureAngle-currentAngle;
