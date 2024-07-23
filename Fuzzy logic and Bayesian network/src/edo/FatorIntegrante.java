@@ -12,20 +12,25 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.security.AccessController;
 
+import org.eclipse.recommenders.jayes.BayesNet;
+import org.eclipse.recommenders.jayes.BayesNode;
+import org.eclipse.recommenders.jayes.inference.IBayesInferer;
+import org.eclipse.recommenders.jayes.inference.junctionTree.JunctionTreeAlgorithm;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Arrays;
+
+
 import net.sourceforge.jFuzzyLogic.FIS;
 import net.sourceforge.jFuzzyLogic.FunctionBlock;
 import net.sourceforge.jFuzzyLogic.plot.JFuzzyChart;
 
 public class FatorIntegrante extends AdvancedRobot {
     final static String fclFileName = "/home/luis/IdeaProjects/Fuzzy logic and Bayesian network/src/edo/rules.fcl";
-
-        enum Signal {
-        PLUS, MINUS, NEUTRAL, NONE
-    }
-
-    enum Axis {
-        X, Y, NEUTRAL, NONE
-    }
 
     /* Variaveis de controle de ações do robo */
     private final double limitFromWall = 50d;
@@ -41,12 +46,10 @@ public class FatorIntegrante extends AdvancedRobot {
     private double newRadarAngle;
     private double newAngleGun;
     private double projection;
-    private Signal signal;
 
     /* Variaveis de armazenamento de informações externas ao robo*/
     private EnemyBot enemy = new EnemyBot();
     private Point2D.Double myPrevCoord = new Point2D.Double(0d,0d);
-    private double distanceBeetweenMyCoords;
     private double accourate = 0d;
     private double totalShots = 0d;
     private double hits = 0d;
@@ -66,13 +69,11 @@ public class FatorIntegrante extends AdvancedRobot {
         }
 
         firePowerFunction = fis.getFunctionBlock("getFirePower");
+
         setAdjustRadarForGunTurn(true);
         setAdjustRadarForRobotTurn(true);
         setAdjustGunForRobotTurn(true);
-        addCustomEvent(new Condition("nearWall") {
-            public boolean test() {
-                return (getX() <= limitFromWall || getX() >= getBattleFieldWidth() - limitFromWall  || getY() <= limitFromWall || getY() >= getBattleFieldHeight() - limitFromWall);}
-        });
+
         setTurnRadarRight(Double.POSITIVE_INFINITY);
         this.myCoord = new Point2D.Double(getX(), getY());
         while (true) {
