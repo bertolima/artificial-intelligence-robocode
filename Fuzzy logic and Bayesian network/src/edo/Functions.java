@@ -4,11 +4,14 @@ import Enemy.EnemyBot;
 import net.sourceforge.jFuzzyLogic.FunctionBlock;
 
 import java.awt.geom.Point2D;
-import java.util.Random;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
-import net.sourceforge.jFuzzyLogic.FIS;
-import net.sourceforge.jFuzzyLogic.FunctionBlock;
-import net.sourceforge.jFuzzyLogic.plot.JFuzzyChart;
+import org.eclipse.recommenders.jayes.BayesNet;
+import org.eclipse.recommenders.jayes.BayesNode;
+import org.eclipse.recommenders.jayes.inference.IBayesInferer;
+import robocode.util.Utils;
 
 public class Functions {
 
@@ -58,9 +61,9 @@ public class Functions {
 
 
 
-        public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime){
+        public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime, BayesNode[] nodes, IBayesInferer inferer, HashMap<Integer, String> getDirection){
         if (Math.abs(headingDif) > 0.01d) return predictCircularMove(myPos, enemy.getCoord(), battleSize, enemy.getVelocity(), enemyCurrentHeading, headingDif, bulletTravelTime);
-        return linearTargeting(enemy, enemy.getVelocity() * bulletTravelTime);
+        return linearTargeting(enemy, enemy.getVelocity() * bulletTravelTime, nodes, inferer, getDirection);
     }
 
     private static Point2D.Double predictCircularMove(Point2D myPos, Point2D enemyPos, Point2D.Double battleSize, double speed, double currentHeading, double diffHeading, double time){
@@ -80,39 +83,155 @@ public class Functions {
         return newPos;
     }
 
-    private static Point2D.Double linearTargeting(EnemyBot enemy, double enemyDistance){
+    private static Point2D.Double linearTargeting(EnemyBot enemy, double enemyDistance, BayesNode[] nodes, IBayesInferer inferer, HashMap<Integer, String> getDirection){
         Point2D.Double newPos = new Point2D.Double(enemy.getX(), enemy.getY());
-        byte[] ans = determineLinearMovement(enemy);
-        double projection =  enemyDistance;
-
-        if (ans[1] == -1) projection *= -1;
-
-        if (ans[0] == 1) newPos.setLocation(newPos.getX() + projection, newPos.getY());
-        else if (ans[0] == -1) newPos.setLocation(newPos.getX(), newPos.getY() + projection);
-        else newPos.setLocation(newPos.getX() + Math.cos(enemy.getHeading())*projection,
-                    newPos.getY()+ Math.sin(enemy.getHeading())*projection);
+        int i = determineLinearMovement(enemy, nodes, inferer);
+        String ans;
+        if (i != -1) ans = getDirection.get(i);
+        else return newPos;
+        System.out.println(enemy.getHeading());
+        System.out.println(ans);
+        switch (ans) {
+            case "xplus":
+                newPos.setLocation(newPos.getX() + enemyDistance, newPos.getY());
+                break;
+            case "xminus":
+                newPos.setLocation(newPos.getX() - enemyDistance, newPos.getY());
+                break;
+            case "yplus":
+                newPos.setLocation(newPos.getX(), newPos.getY() + enemyDistance);
+                break;
+            case "yminus":
+                newPos.setLocation(newPos.getX(), newPos.getY() - enemyDistance);
+                break;
+            case "xyplus":
+                newPos.setLocation(newPos.getX() + Math.cos(enemy.getHeading())*enemyDistance, newPos.getY()+ Math.sin(enemy.getHeading())*enemyDistance);
+                break;
+            case "xyminus":
+                newPos.setLocation(newPos.getX() + Math.cos(enemy.getHeading())*enemyDistance*-1, newPos.getY()+ Math.sin(enemy.getHeading())*enemyDistance*-1);
+                break;
+            case "xplusyminus":
+                newPos.setLocation(newPos.getX() + Math.cos(enemy.getHeading())*enemyDistance, newPos.getY()+ Math.sin(enemy.getHeading())*enemyDistance*-1);
+                break;
+            case "xminusyplus":
+                newPos.setLocation(newPos.getX() + Math.cos(enemy.getHeading())*enemyDistance*-1, newPos.getY()+ Math.sin(enemy.getHeading())*enemyDistance);
+                break;
+            case "still":
+                break;
+        }
 
         return newPos;
     }
 
-    private static byte[] determineLinearMovement(EnemyBot enemy){
+    private static int determineLinearMovement(EnemyBot enemy, BayesNode[] nodes, IBayesInferer inferer){
         Point2D.Double diffPos = new Point2D.Double(enemy.getX() - enemy.getPrevCoord().getX(),
                 enemy.getY() - enemy.getPrevCoord().getY());
         enemy.setPrevDistance(enemy.getCoord().distance(enemy.getPrevCoord()));
-        byte[] ans = {0,0};
-        if (Math.abs(Math.abs(diffPos.x) - Math.abs(diffPos.y)) > enemy.getPrevDistance()/2){
-            if (Math.max(Math.abs(diffPos.x), Math.abs(diffPos.y)) == Math.abs(diffPos.x)){
-                if (diffPos.x < 0) ans[1] = -1;
-                else ans[1] = 1;;
-                ans[0] = 1;
-            }
-            else{
-                if (diffPos.y < 0) ans[1] = -1;
-                else ans[1] = 1;
-                ans[0] = -1;
-            }
+
+        Map<BayesNode, String> evidence = new HashMap<>();
+
+        if (diffPos.x < 0) evidence.put(nodes[1], "minus");
+        else evidence.put(nodes[1], "plus");
+        if (diffPos.y < 0) evidence.put(nodes[2], "minus");
+        else evidence.put(nodes[2], "plus");
+
+        if (Utils.isNear(diffPos.x, 0) && Utils.isNear(diffPos.y, 0)) evidence.put(nodes[0], "still");
+        else if(Math.abs(Math.abs(diffPos.x) - Math.abs(diffPos.y)) > enemy.getPrevDistance()/2){
+            if (Math.abs(diffPos.x) > Math.abs(diffPos.y)) evidence.put(nodes[0], "x");
+            else  evidence.put(nodes[0], "y");
         }
-        
-        return ans;
+        else evidence.put(nodes[0], "xy");
+
+        inferer.setEvidence(evidence);
+        double[] beliefsD = inferer.getBeliefs(nodes[3]);
+        double best = Arrays.stream(beliefsD).max().getAsDouble();
+        int index = -1;
+        for (int i = 0; i< beliefsD.length;i++) {
+           if (beliefsD[i] == best) return i;
+        }
+
+       return -1;
+
     }
+
+    public static BayesNode[] initBayesNetwork(IBayesInferer inferer){
+        BayesNet net = new BayesNet();
+        BayesNode[] nodes = new BayesNode[4];
+        nodes[0] = net.createNode("axis");
+        nodes[0].addOutcomes("x", "y", "xy", "still");
+        nodes[0].setProbabilities (0.25, 0.25, 0.25, 0.25);
+
+        nodes[1] = net.createNode("xsignal");
+        nodes[1].addOutcomes("plus", "minus");
+        nodes[1].setParents(Arrays.asList(nodes[0]));
+        nodes[1].setProbabilities (
+                0.5, 0.5, // a == x
+                0.5, 0.5, // a == y
+                0.5, 0.5, // a == xy
+                0.5, 0.5 // a == still
+        );
+
+        nodes[2] = net.createNode("ysignal");
+        nodes[2].addOutcomes("plus", "minus");
+        nodes[2].setParents(Arrays.asList(nodes[0], nodes[1]));
+        nodes[2].setProbabilities (
+                //a = x
+                0.5, 0.5, // b == xplus
+                0.5, 0.5, // b == xminus
+                //a=y
+                0.5, 0.5, // b == xplus
+                0.5, 0.5, // b == xminus
+                //a=xy
+                0.5, 0.5, // a == xplus
+                0.5, 0.5, // a == xminus
+                //a=still
+                0.5, 0.5, // b == plus
+                0.5, 0.5  // b == minus
+        );
+
+        nodes[3] = net.createNode("d");
+        nodes[3].addOutcomes("xplus", "xminus", "yplus", "yminus", "xyplus", "xyminus", "xplusyminus", "xminusyplus", "still");
+        nodes[3].setParents(Arrays.asList(nodes[0], nodes[1], nodes[2]));
+
+        nodes[3].setProbabilities(
+                // a == x
+                0.5, 0.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.2, // b == xplusyplus
+                0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.0, 0.2, // b == xplusyminus
+                0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, // b == xminyplus
+                0.0, 0.5, 0.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.2, // b == xminyminus
+                // a == y
+                0.0, 0.0, 0.5, 0.0, 0.3, 0.0, 0.0, 0.0, 0.2, // b == xplusyplus
+                0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.3, 0.0, 0.2, // b == xplusyminus
+                0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, // b == xminyplus
+                0.0, 0.0, 0.0, 0.5, 0.0, 0.3, 0.0, 0.0, 0.2, // b == xminyminus
+                // a == xy
+                0.15, 0.0, 0.15, 0.0, 0.5, 0.0, 0.0, 0.0, 0.2, // b == xplusyplus
+                0.15, 0.0, 0.0, 0.15, 0.0, 0.0, 0.5, 0.0, 0.2, // b == xplusyminus
+                0.0, 0.15, 0.15, 0.0, 0.0, 0.0, 0.0, 0.5, 0.2, // b == xminyplus
+                0.0, 0.15, 0.0, 0.15, 0.0, 0.5, 0.0, 0.0, 0.2, // b == xminyminus
+                // a == still
+                0.1, 0.0, 0.0, 0.0, 0.2, 0.0, 0.2, 0.0, 0.5, // b == xplusyplus
+                0.0, 0.1, 0.0, 0.0, 0.0, 0.2, 0.0, 0.2, 0.5, // b == xplusyminus
+                0.0, 0.0, 0.1, 0.0, 0.2, 0.0, 0.0, 0.2, 0.5, // b == xminyplus
+                0.0, 0.0, 0.0, 0.1, 0.0, 0.2, 0.2, 0.0, 0.5  // b == xminyminus
+
+        );
+        inferer.setNetwork(net);
+        return nodes;
+    }
+
+    public static HashMap<Integer, String> initDirectionHash(){
+        HashMap<Integer, String> getDirection = new HashMap<>();
+        getDirection.put(0, "xplus");
+        getDirection.put(1, "xminus");
+        getDirection.put(2, "yplus");
+        getDirection.put(3, "yminus");
+        getDirection.put(4, "xyplus");
+        getDirection.put(5, "xyminus");
+        getDirection.put(6, "xplusyminus");
+        getDirection.put(7, "xminusyplus");
+        getDirection.put(8, "still");
+        return getDirection;
+    }
+
 }
