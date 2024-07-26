@@ -30,7 +30,8 @@ import net.sourceforge.jFuzzyLogic.FunctionBlock;
 import net.sourceforge.jFuzzyLogic.plot.JFuzzyChart;
 
 public class FatorIntegrante extends AdvancedRobot {
-    final static String fclFileName = "/home/luis/IdeaProjects/Fuzzy logic and Bayesian network/src/edo/rules.fcl";
+
+    final static String fclFileName = "/home/luis/Desktop/artificial-intelligence-robocode/Fuzzy logic and Bayesian network/src/edo/rules.fcl";
 
     /* Variaveis de controle de ações do robo */
     private final double limitFromWall = 50d;
@@ -55,6 +56,7 @@ public class FatorIntegrante extends AdvancedRobot {
     private double hits = 0d;
 
     private FunctionBlock firePowerFunction;
+    private FunctionBlock distanceFromEnemy;
     FIS fis = null;
 
     public void run() {
@@ -69,6 +71,7 @@ public class FatorIntegrante extends AdvancedRobot {
         }
 
         firePowerFunction = fis.getFunctionBlock("getFirePower");
+        distanceFromEnemy = fis.getFunctionBlock("getDistance");
 
         setAdjustRadarForGunTurn(true);
         setAdjustRadarForRobotTurn(true);
@@ -92,15 +95,18 @@ public class FatorIntegrante extends AdvancedRobot {
 
 
     private void move(){
-        Point2D.Double newPos = this.getMyNextPos();
+        double distance = Functions.calculateDistanceFromEnemy(firePowerFunction, getEnergy(), this.enemy.getEnergy());
+        System.out.println(distance);
+        Point2D.Double newPos = this.getMyNextPos(distance);
         if (Functions.needNormalize(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight()))
             newPos = Functions.normalizeCoords(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight());
         if (!this.enemy.none()){
-
-            if (this.enemy.getDistance() < 200){
-
+            if (this.enemy.getDistance() <= distance){
+                double newX = enemy.getX() + 200 * Math.sin(enemy.getHeading()+90);
+                double newY = enemy.getY() + 200 * Math.cos(enemy.getHeading()+90);
+                newPos.setLocation(newX, newY);
             }
-            else this.goTo(newPos);
+            goTo(newPos);
 
         }
     }
@@ -139,11 +145,9 @@ public class FatorIntegrante extends AdvancedRobot {
     }
 
     //calcula posição em que eu quero posicionar o meu robo
-    private Point2D.Double getMyNextPos(){
+    private Point2D.Double getMyNextPos(double distance){
         Point2D.Double newPos = new Point2D.Double(getX(), getY());
-        if (!this.enemy.none()) {
-            Functions.calculateNextPosition(newPos, this.enemy.getCoord(), angleToEnemy, maxDistanceBetweenRobots);
-        }
+        if (!this.enemy.none()) Functions.calculateNextPosition(newPos, this.enemy.getCoord(), angleToEnemy, distance);
         return newPos;
     }
 
