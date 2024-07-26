@@ -51,36 +51,38 @@ END_RULEBLOCK
 
 END_FUNCTION_BLOCK
 
-FUNCTION_BLOCK getDistanceStatus
+
+
+FUNCTION_BLOCK getDistance
+
 VAR_INPUT
-	distance : REAL;
 	energy : REAL;
+	enemyEnergy : REAL;
 END_VAR
 
 VAR_OUTPUT
-	scale : REAL;
+	distance : REAL;
 END_VAR
 
-FUZZIFY distance
-	TERM near := trape 0 50 200 350;
-	TERM regular := trape 200 300 400 500;
-	TERM far := trape 450 550 2000 2000;
+FUZZIFY energy
+	TERM low := trape 0 10 20 30;
+	TERM regular := trape 25 30 50 60;
+	TERM high := trape 55 70 200 200;
 END_FUZZIFY
 
-FUZZIFY energy	// Variáveis de entrada para Fuzzify  'energy': { 'low', 'regular', 'high' }
-	TERM low := trape 0 0 20 40;
-	TERM regular := trape 25 40 60 70;
-	TERM high := trape 60 70 200 200;
+FUZZIFY enemyEnergy
+	TERM low := trape 0 10 20 40;
+	TERM regular := trape 35 45 60 70;
+	TERM high := trape 55 70 200 200;
 END_FUZZIFY
 
-DEFUZZIFY scale
-	TERM veryPrecaution := trape 0 0.1 0.2 0.25;
-	TERM precaution := trape 0.2 0.35 0.45 0.5;
-	TERM regular := trape 0.4 0.5 0.5 0.6;
-	TERM agressive := trape 0.55 0.65 0.7 0.75;
-	TERM veryAgressive := trape 0.7 0.8 1 1;
+DEFUZZIFY distance
+	TERM veryClose := trape 15 55 95 140;
+	TERM close := trape 130 160 190 220;
+	TERM regular := trape 220 250 280 310;
+	TERM far := trape 300 400 500 600;
 	METHOD : COG;
-	DEFAULT := 0.5;
+	DEFAULT := 300;
 END_DEFUZZIFY
 
 RULEBLOCK No1
@@ -88,13 +90,13 @@ RULEBLOCK No1
 	ACT : MIN;			// Use 'min' activation method
 	ACCU : MAX;			// Use 'max' accumulation method
 
-	RULE 1 : IF distance IS near AND energy IS high THEN scale IS veryAgressive;
-	RULE 2 : IF distance IS near AND energy IS regular THEN scale IS agressive;
-	RULE 3 : IF distance IS near AND energy IS low THEN scale IS veryPrecaution;
-	RULE 4 : IF distance IS regular AND energy IS low THEN scale IS precaution;
-	RULE 5 : IF distance IS regular AND energy IS NOT low THEN scale IS agressive;
-	RULE 6 : IF distance IS far AND energy IS NOT high AND energy IS NOT regular THEN scale IS regular;
-	RULE 7 : IF distance IS far AND energy IS high THEN scale IS veryAgressive;
+	RULE 1 : IF energy IS high AND enemyEnergy is high THEN distance IS regular;
+	RULE 2 : IF energy IS high AND enemyEnergy is regular THEN distance IS close;
+	RULE 3 : IF energy IS high AND enemyEnergy is regular THEN distance IS veryClose;
+	RULE 4 : IF energy IS regular AND NOT enemyEnergy is high THEN distance IS regular;
+	RULE 5 : IF energy IS regular AND enemyEnergy is high THEN distance IS far;
+	RULE 6 : IF energy IS low AND enemyEnergy is low THEN distance IS close;
+	RULE 7 : IF energy IS low AND NOT enemyEnergy is low THEN distance IS far;
 END_RULEBLOCK
 
 END_FUNCTION_BLOCK
