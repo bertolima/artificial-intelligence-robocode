@@ -59,6 +59,13 @@ public class FatorIntegrante extends AdvancedRobot {
     private FunctionBlock distanceFromEnemy;
     FIS fis = null;
 
+    private BayesNode a;
+    private BayesNode b;
+    private BayesNode c;
+    private BayesNode d;
+    IBayesInferer inferer = new JunctionTreeAlgorithm();
+
+
     public void run() {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
@@ -76,6 +83,62 @@ public class FatorIntegrante extends AdvancedRobot {
         setAdjustRadarForGunTurn(true);
         setAdjustRadarForRobotTurn(true);
         setAdjustGunForRobotTurn(true);
+
+        BayesNet net = new BayesNet();
+        a = net.createNode("axis");
+        a.addOutcomes("x", "y", "xy", "still");
+        a.setProbabilities (0.25, 0.25, 0.25, 0.25);
+
+        b = net.createNode("xsignal");
+        b.addOutcomes("plus", "minus");
+        b.setParents(Arrays.asList(a));
+        b.setProbabilities (
+                0.5, 0.5, // a == x
+                0.5, 0.5, // a == y
+                0.5, 0.5, // a == xy
+                0.5, 0.5 // a == still
+        );
+
+        c = net.createNode("ysignal");
+        c.addOutcomes("plus", "minus");
+        c.setParents(Arrays.asList(a));
+        c.setProbabilities (
+                0.5, 0.5, // a == x
+                0.5, 0.5, // a == y
+                0.5, 0.5, // a == xy
+                0.5, 0.5 // a == still
+        );
+
+        d = net.createNode("d");
+        d.addOutcomes("xplus", "xminus", "yplus", "yminus", "xyplus", "xyminus", "xplusyminus", "xminusyplus", "still");
+        d.setParents(Arrays.asList(a, b, c));
+
+        d.setProbabilities(
+                // a == x
+                0.5, 0.0, 0.1, 0.1, 0.15, 0.0, 0.15, 0.0, 0.0, // b == xplus
+                0.0, 0.5, 0.1, 0.1, 0.0, 0.15, 0.0, 0.15, 0.0, // b == xminus
+                0.1, 0.1, 0.1, 0.0, 0.2, 0.0, 0.0, 0.2, 0.3, // b == yplus
+                0.1, 0.1, 0.0, 0.1, 0.0, 0.2, 0.2, 0.0, 0.3, // b == yminus
+                // a == y
+                0.1, 0.1, 0.1, 0.0, 0.2, 0.0, 0.0, 0.2, 0.3, // b == xplus
+                0.1, 0.1, 0.0, 0.1, 0.0, 0.2, 0.2, 0.0, 0.3, // b == xminus
+                0.5, 0.0, 0.1, 0.1, 0.15, 0.0, 0.15, 0.0, 0.0, // b == yplus
+                0.0, 0.5, 0.1, 0.1, 0.0, 0.15, 0.0, 0.15, 0.0, // b == yminus
+                // a == xy
+                0.15, 0.0, 0.05, 0.05, 0.25, 0.0, 0.25, 0.0, 0.25, // b == xplus
+                0.0, 0.15, 0.05, 0.05, 0.0, 0.25, 0.0, 0.25, 0.25, // b == xminus
+                0.05, 0.05, 0.15, 0.0, 0.25, 0.0, 0.0, 0.25, 0.25, // b == yplus
+                0.05, 0.05, 0.0, 0.15, 0.0, 0.25, 0.25, 0.0, 0.25, // b == yminus
+                // a == still
+                0.1, 0.0, 0.0, 0.0, 0.2, 0.0, 0.2, 0.0, 0.5, // b == xplus
+                0.0, 0.1, 0.0, 0.0, 0.0, 0.2, 0.0, 0.2, 0.5, // b == xminus
+                0.0, 0.0, 0.1, 0.0, 0.2, 0.0, 0.0, 0.2, 0.5, // b == yplus
+                0.0, 0.0, 0.0, 0.1, 0.0, 0.2, 0.2, 0.0, 0.5  // b == yminus
+
+        );
+
+        inferer = new JunctionTreeAlgorithm();
+        inferer.setNetwork(net);
 
         setTurnRadarRight(Double.POSITIVE_INFINITY);
         this.myCoord = new Point2D.Double(getX(), getY());
@@ -142,6 +205,15 @@ public class FatorIntegrante extends AdvancedRobot {
         double enemyX = getX() + this.enemy.getDistance() * Math.sin(this.angleToEnemy);
         double enemyY = getY() + this.enemy.getDistance() * Math.cos(this.angleToEnemy);
         this.enemy.setCoord(enemyX, enemyY);
+
+        Map<BayesNode, String> evidence = new HashMap<>();
+        evidence.put(a, "false"); // Exemplo de evidência para o nó a
+        evidence.put(b, "three"); // Exemplo de evidência para o nó b
+        evidence.put(c, "three"); // Exemplo de evidência para o nó b
+        inferer.setEvidence(evidence);
+
+        double[] beliefsD = inferer.getBeliefs(d);
+
     }
 
     //calcula posição em que eu quero posicionar o meu robo
