@@ -146,4 +146,12 @@ public class EnemyBot {
         return this.name.equals("");
     }
 
+    public double getFutureX(double when){
+        return getX() + Math.sin(Math.toRadians(getHeading())) * getVelocity() * when;
+    }
+
+    public double getFutureY(double when){
+        return getY() + Math.cos(Math.toRadians(getHeading())) * getVelocity() * when;
+    }
+
 }
