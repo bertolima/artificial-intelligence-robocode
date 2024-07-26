@@ -77,10 +77,9 @@ FUZZIFY enemyEnergy
 END_FUZZIFY
 
 DEFUZZIFY distance
-	TERM veryClose := trape 15 55 95 140;
 	TERM close := trape 130 160 190 220;
-	TERM regular := trape 220 250 280 310;
-	TERM far := trape 300 400 500 600;
+	TERM regular := trape 220 250 270 300;
+	TERM far := trape 300 320 350 400;
 	METHOD : COG;
 	DEFAULT := 300;
 END_DEFUZZIFY
@@ -92,11 +91,10 @@ RULEBLOCK No1
 
 	RULE 1 : IF energy IS high AND enemyEnergy is high THEN distance IS regular;
 	RULE 2 : IF energy IS high AND enemyEnergy is regular THEN distance IS close;
-	RULE 3 : IF energy IS high AND enemyEnergy is regular THEN distance IS veryClose;
-	RULE 4 : IF energy IS regular AND NOT enemyEnergy is high THEN distance IS regular;
-	RULE 5 : IF energy IS regular AND enemyEnergy is high THEN distance IS far;
-	RULE 6 : IF energy IS low AND enemyEnergy is low THEN distance IS close;
-	RULE 7 : IF energy IS low AND NOT enemyEnergy is low THEN distance IS far;
+	RULE 3 : IF energy IS regular AND NOT enemyEnergy is high THEN distance IS regular;
+	RULE 4 : IF energy IS regular AND enemyEnergy is high THEN distance IS far;
+	RULE 5 : IF energy IS low AND enemyEnergy is low THEN distance IS close;
+	RULE 6 : IF energy IS low AND NOT enemyEnergy is low THEN distance IS far;
 END_RULEBLOCK
 
 END_FUNCTION_BLOCK
