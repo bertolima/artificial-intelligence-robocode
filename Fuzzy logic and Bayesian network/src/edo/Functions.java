@@ -49,7 +49,16 @@ public class Functions {
         return firePower.getVariable("firePower").getValue();
     }
 
-    public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime){
+    public static double calculateDistanceFromEnemy(FunctionBlock distance ,double energy, double enemyEnergy){
+        distance.setVariable("enemyEnergy", enemyEnergy);
+        distance.setVariable("energy", energy);
+        distance.evaluate();
+        return distance.getVariable("distance").getValue();
+    }
+
+
+
+        public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime){
         if (Math.abs(headingDif) > 0.01d) return predictCircularMove(myPos, enemy.getCoord(), battleSize, enemy.getVelocity(), enemyCurrentHeading, headingDif, bulletTravelTime);
         return linearTargeting(enemy, enemy.getVelocity() * bulletTravelTime);
     }
@@ -74,7 +83,7 @@ public class Functions {
     private static Point2D.Double linearTargeting(EnemyBot enemy, double enemyDistance){
         Point2D.Double newPos = new Point2D.Double(enemy.getX(), enemy.getY());
         byte[] ans = determineLinearMovement(enemy);
-        double projection = 2 * enemyDistance;
+        double projection =  enemyDistance;
 
         if (ans[1] == -1) projection *= -1;
 
