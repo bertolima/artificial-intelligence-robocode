@@ -56,12 +56,19 @@ public class Functions {
         distance.setVariable("enemyEnergy", enemyEnergy);
         distance.setVariable("energy", energy);
         distance.evaluate();
-        return distance.getVariable("distance").getValue();
+        return distance.getVariable("dist").getValue();
+    }
+
+    public static double calculateAngulationFromEnemy(FunctionBlock angulation ,double distance, double speed){
+        angulation.setVariable("distance", distance);
+        angulation.setVariable("speed", speed);
+        angulation.evaluate();
+        return angulation.getVariable("angulation").getValue();
     }
 
 
 
-        public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime, BayesNode[] nodes, IBayesInferer inferer, HashMap<Integer, String> getDirection){
+    public static Point2D.Double getTargetPosition(Point2D.Double myPos, EnemyBot enemy, Point2D.Double battleSize, double enemyCurrentHeading, double headingDif, double bulletTravelTime, BayesNode[] nodes, IBayesInferer inferer, HashMap<Integer, String> getDirection){
         if (Math.abs(headingDif) > 0.01d) return predictCircularMove(myPos, enemy.getCoord(), battleSize, enemy.getVelocity(), enemyCurrentHeading, headingDif, bulletTravelTime);
         return linearTargeting(enemy, enemy.getVelocity() * bulletTravelTime, nodes, inferer, getDirection);
     }
@@ -89,8 +96,6 @@ public class Functions {
         String ans;
         if (i != -1) ans = getDirection.get(i);
         else return newPos;
-        System.out.println(enemy.getHeading());
-        System.out.println(ans);
         switch (ans) {
             case "xplus":
                 newPos.setLocation(newPos.getX() + enemyDistance, newPos.getY());
