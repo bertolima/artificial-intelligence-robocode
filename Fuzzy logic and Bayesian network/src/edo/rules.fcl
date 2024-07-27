@@ -54,19 +54,18 @@ END_FUNCTION_BLOCK
 
 
 FUNCTION_BLOCK getDistance
-
 VAR_INPUT
-	energy : REAL;
 	enemyEnergy : REAL;
+	energy : REAL;
 END_VAR
 
 VAR_OUTPUT
-	distance : REAL;
+	dist : REAL;
 END_VAR
 
 FUZZIFY energy
-	TERM low := trape 0 10 20 30;
-	TERM regular := trape 25 30 50 60;
+	TERM low := trape 0 10 20 40;
+	TERM regular := trape 35 45 60 70;
 	TERM high := trape 55 70 200 200;
 END_FUZZIFY
 
@@ -76,10 +75,10 @@ FUZZIFY enemyEnergy
 	TERM high := trape 55 70 200 200;
 END_FUZZIFY
 
-DEFUZZIFY distance
-	TERM close := trape 130 160 190 220;
-	TERM regular := trape 220 250 270 300;
-	TERM far := trape 300 320 350 400;
+DEFUZZIFY dist
+	TERM close := trape 80 150 180 200;
+	TERM regular := trape 190 240 270 300;
+	TERM far := trape 300 400 500 600;
 	METHOD : COG;
 	DEFAULT := 300;
 END_DEFUZZIFY
@@ -89,12 +88,60 @@ RULEBLOCK No1
 	ACT : MIN;			// Use 'min' activation method
 	ACCU : MAX;			// Use 'max' accumulation method
 
-	RULE 1 : IF energy IS high AND enemyEnergy is high THEN distance IS regular;
-	RULE 2 : IF energy IS high AND enemyEnergy is regular THEN distance IS close;
-	RULE 3 : IF energy IS regular AND NOT enemyEnergy is high THEN distance IS regular;
-	RULE 4 : IF energy IS regular AND enemyEnergy is high THEN distance IS far;
-	RULE 5 : IF energy IS low AND enemyEnergy is low THEN distance IS close;
-	RULE 6 : IF energy IS low AND NOT enemyEnergy is low THEN distance IS far;
+	RULE 1 : IF energy IS high AND enemyEnergy is high THEN dist IS regular;
+	RULE 2 : IF energy IS high AND enemyEnergy is regular THEN dist IS close;
+	RULE 3 : IF energy IS regular AND NOT enemyEnergy is high THEN dist IS regular;
+	RULE 4 : IF energy IS regular AND enemyEnergy is high THEN dist IS regular;
+	RULE 5 : IF energy IS low AND enemyEnergy is low THEN dist IS close;
+	RULE 6 : IF energy IS low AND NOT enemyEnergy is low THEN dist IS far;
+	RULE 6 : IF energy IS high THEN dist IS close;
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
+
+
+
+FUNCTION_BLOCK getAngulation
+
+VAR_INPUT
+	speed : REAL;
+	distance : REAL;
+END_VAR
+
+VAR_OUTPUT
+	angulation : REAL;
+END_VAR
+
+FUZZIFY speed
+	TERM low := trian 0 2 4;
+	TERM regular := trian 3.5 4.5 5.5;
+	TERM high := trian 5 6.5 8;
+END_FUZZIFY
+
+FUZZIFY distance
+	TERM near := trape 0 0 150 300;
+	TERM regular := trape 200 300 400 500;
+	TERM far := trape 450 550 2000 2000;
+END_FUZZIFY
+
+DEFUZZIFY angulation
+	TERM low := trape 45 60 75 90;
+	TERM lot := trape 75 90 105 120;
+	METHOD : COG;
+	DEFAULT := 60;
+END_DEFUZZIFY
+
+RULEBLOCK No3
+	AND : MIN;			// É comum utilizar o método MIN para o operador AND, e o método MAX para o operador OR.
+	ACT : MIN;			// Use 'min' activation method
+	ACCU : MAX;			// Use 'max' accumulation method
+
+    RULE 1 : IF speed IS low AND distance is regular THEN angulation IS lot;
+	RULE 2 : IF speed IS high AND distance is far THEN angulation IS low;
+	RULE 3 : IF NOT distance IS far AND NOT speed IS high THEN angulation IS low;
+	RULE 4 : IF speed IS regular AND distance is near THEN angulation IS lot;
+	RULE 5 : IF NOT speed IS high AND NOT distance is far THEN angulation IS lot;
+
 END_RULEBLOCK
 
 END_FUNCTION_BLOCK
