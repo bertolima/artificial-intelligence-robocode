@@ -8,26 +8,15 @@ import robocode.util.Utils;
 import java.awt.*;
 import java.awt.geom.Point2D;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.security.AccessController;
-
-import org.eclipse.recommenders.jayes.BayesNet;
 import org.eclipse.recommenders.jayes.BayesNode;
 import org.eclipse.recommenders.jayes.inference.IBayesInferer;
 import org.eclipse.recommenders.jayes.inference.junctionTree.JunctionTreeAlgorithm;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Arrays;
-
 
 import net.sourceforge.jFuzzyLogic.FIS;
 import net.sourceforge.jFuzzyLogic.FunctionBlock;
-import net.sourceforge.jFuzzyLogic.plot.JFuzzyChart;
+
 
 public class FatorIntegrante extends AdvancedRobot {
 
@@ -41,6 +30,7 @@ public class FatorIntegrante extends AdvancedRobot {
     private final double circularSpeed = 100d;
     private Point2D.Double myCoord;
     private int direction = 1;
+    private byte angulationFactor = 1;
 
     /* Variaveis de parâmetros para calculos */
     private double angleToEnemy;
@@ -57,6 +47,7 @@ public class FatorIntegrante extends AdvancedRobot {
 
     private FunctionBlock firePowerFunction;
     private FunctionBlock distanceFromEnemy;
+    private FunctionBlock angulationFromEnemy;
     FIS fis = null;
 
     private BayesNode[] nodes;
@@ -78,6 +69,7 @@ public class FatorIntegrante extends AdvancedRobot {
 
         firePowerFunction = fis.getFunctionBlock("getFirePower");
         distanceFromEnemy = fis.getFunctionBlock("getDistance");
+        angulationFromEnemy = fis.getFunctionBlock("getAngulation");
 
         setAdjustRadarForGunTurn(true);
         setAdjustRadarForRobotTurn(true);
@@ -103,13 +95,16 @@ public class FatorIntegrante extends AdvancedRobot {
 
 
     private void move(){
-        double distance = Functions.calculateDistanceFromEnemy(firePowerFunction, getEnergy(), this.enemy.getEnergy());
+        double distance = Functions.calculateDistanceFromEnemy(distanceFromEnemy, getEnergy(), this.enemy.getEnergy());
+        System.out.println(distance);
         Point2D.Double newPos = this.getMyNextPos(distance);
-
         if (!this.enemy.none()){
             if (this.enemy.getDistance() <= 250){
-                double newX = enemy.getX() + 200 * Math.sin(enemy.getHeading()+90);
-                double newY = enemy.getY() + 200 * Math.cos(enemy.getHeading()+90);
+                double angulation = Functions.calculateAngulationFromEnemy(angulationFromEnemy, enemy.getDistance(), enemy.getVelocity());
+                if (getTime() % 56 == 0) angulationFactor *=-1;
+                angulation *= angulationFactor;
+                double newX = enemy.getX() + distance * Math.sin(enemy.getHeading()+angulation);
+                double newY = enemy.getY() + distance * Math.cos(enemy.getHeading()+angulation);
                 newPos.setLocation(newX, newY);
             }
         }
@@ -191,6 +186,14 @@ public class FatorIntegrante extends AdvancedRobot {
 
     public void onBulletMissed(BulletMissedEvent b){
         this.totalShots++;
+    }
+
+    public void onHitRobotEvent(HitRobotEvent e){
+        Point2D.Double newPos = new Point2D.Double(getX() + 100 * Math.cos(getHeading() + 180), getY() + 100 * Math.sin(getHeading() + 180));
+        if (Functions.needNormalize(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight()))
+        newPos = Functions.normalizeCoords(newPos, this.wallDistanceLimit, getBattleFieldWidth(), getBattleFieldHeight());
+        clearAllEvents();
+        goTo(newPos);
     }
 
 }
