@@ -1,6 +1,5 @@
 package edo;
 
-import Enemy.EnemyBot;
 import net.sourceforge.jFuzzyLogic.FunctionBlock;
 
 import java.awt.geom.Point2D;

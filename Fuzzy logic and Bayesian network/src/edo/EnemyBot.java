@@ -1,4 +1,4 @@
-package Enemy;
+package edo;
 
 import robocode.ScannedRobotEvent;
 

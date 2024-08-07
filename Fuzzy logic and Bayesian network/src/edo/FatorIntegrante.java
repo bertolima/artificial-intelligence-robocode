@@ -1,6 +1,5 @@
 package edo;
 
-import Enemy.EnemyBot;
 import robocode.*;
 
 import robocode.util.Utils;
@@ -20,7 +19,7 @@ import net.sourceforge.jFuzzyLogic.FunctionBlock;
 
 public class FatorIntegrante extends AdvancedRobot {
 
-    final static String fclFileName = "/home/luis/Desktop/artificial-intelligence-robocode/Fuzzy logic and Bayesian network/src/edo/rules.fcl";
+    final static String fclFileName = "robots/fatorintegrante.fcl";
 
     /* Variaveis de controle de ações do robo */
     private final double limitFromWall = 50d;
@@ -96,7 +95,6 @@ public class FatorIntegrante extends AdvancedRobot {
 
     private void move(){
         double distance = Functions.calculateDistanceFromEnemy(distanceFromEnemy, getEnergy(), this.enemy.getEnergy());
-        System.out.println(distance);
         Point2D.Double newPos = this.getMyNextPos(distance);
         if (!this.enemy.none()){
             if (this.enemy.getDistance() <= 250){
