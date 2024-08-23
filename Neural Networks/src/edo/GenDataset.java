@@ -10,7 +10,7 @@ import java.io.File;
 public class GenDataset {
     public static final int NUMBER_OF_ROUNDS = 50000;
     public static int robotScore,enemyScore;
-    public static final String trainingRobots = "edo.FatorIntegrante*,darkcanuck.Pris 0.92";
+    public static final String trainingRobots = "edo.FatorIntegrante*,sample.Interactive";
     public static final String robocodePath = "/home/luis/workspace/java/robocode";
 
     public static void main(String[] args) throws Exception {

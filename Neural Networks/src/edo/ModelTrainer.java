@@ -24,20 +24,20 @@ public class ModelTrainer {
     public static void main(final String args[]) {
 
         final MLDataSet df = TrainingSetUtil.loadCSVTOMemory(CSVFormat.ENGLISH,
-                "/home/luis/workspace/java/artificial-intelligence-robocode/Neural Networks/normalized_df.csv", false, 5, 2);
+                "/home/luis/workspace/java/artificial-intelligence-robocode/Neural Networks/normalized_df.csv", false, 6, 2);
 //
 //         create a neural network, without using a factory
         BasicNetwork network = new BasicNetwork();
-        network.addLayer(new BasicLayer(null,true,5));
-        network.addLayer(new BasicLayer(new ActivationReLU(),true,60));
-        network.addLayer(new BasicLayer(new ActivationReLU(),true,6));
+        network.addLayer(new BasicLayer(null,true,6));
+        network.addLayer(new BasicLayer(new ActivationReLU(),true,36));
+        network.addLayer(new BasicLayer(new ActivationReLU(),true,12));
         network.addLayer(new BasicLayer(null,true,2));
         network.getStructure().finalizeStructure();
         network.reset();
 
         // train the neural network
         final StochasticGradientDescent  train = new StochasticGradientDescent (network, df);
-        train.setLearningRate(0.0001d);
+        train.setLearningRate(0.00001d);
 
         int epoch = 1;
 
@@ -49,7 +49,7 @@ public class ModelTrainer {
         } while (train.getError() > 0.00000001);
         train.finishTraining();
 //
-        String filename = "network.eg";
+        String filename = "network1.eg";
 //
 // save network...
         saveObject(new File(filename), network);

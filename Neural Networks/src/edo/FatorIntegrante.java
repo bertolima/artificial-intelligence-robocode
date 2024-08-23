@@ -49,7 +49,7 @@ public class FatorIntegrante extends AdvancedRobot {
     private String specs;
 
     //model e variaveis pra treinar in-game
-    private static BasicNetwork network = (BasicNetwork) loadObject(new File("/home/luis/workspace/java/artificial-intelligence-robocode/Neural Networks/network.eg"));
+    private static BasicNetwork network = (BasicNetwork) loadObject(new File("/home/luis/workspace/java/artificial-intelligence-robocode/Neural Networks/network1.eg"));
     private double[] input;
     private double[] out;
     private static ArrayList<double[]> inputs = new ArrayList<>();
@@ -60,12 +60,14 @@ public class FatorIntegrante extends AdvancedRobot {
     private static final double max_x = 782d;
     private static final double min_y = 18d;
     private static final double max_y = 582d;
-    private static final double min_dist = 36.140827;
-    private static final double max_dist = 824.68583;
+    private static final double min_dist = 35.905843;
+    private static final double max_dist = 885.884239;
+    private static final double min_speed = -8.0;
+    private static final double max_speed = 8.0;
     private static final double min_heading = 0d;
-    private static final double max_heading = 6.283112;
-    private static final double min_time = 2.450226;
-    private static final double max_time = 50.059306;
+    private static final double max_heading = 6.282866;
+    private static final double min_time = 2.509667;
+    private static final double max_time = 51.326127;
 
     //variaveis de logica fuzzy
     FIS fis = null;
@@ -95,12 +97,12 @@ public class FatorIntegrante extends AdvancedRobot {
             return;
         }
 
-        //fast train into neural network before each round start
+//        fast train into neural network before each round start
         if (outs.size() > 0){
             while(inputs.size() > outs.size()){
                 inputs.remove(inputs.size()-1);
             }
-            double[][]in_arr = new double[inputs.size()][5];
+            double[][]in_arr = new double[inputs.size()][6];
             double[][]out_arr = new double[inputs.size()][2];
 
             for(int i=0; i<outs.size(); i++) {
@@ -111,12 +113,12 @@ public class FatorIntegrante extends AdvancedRobot {
             MLDataSet trainingSet = new BasicMLDataSet(in_arr,out_arr);
 
             final StochasticGradientDescent train = new StochasticGradientDescent (network, trainingSet);
-            train.setLearningRate(0.0001d);
+            train.setLearningRate(0.00001d);
             int epoch = 1;
             do {
                 train.iteration();
                 epoch++;
-            } while (epoch < 3000);
+            } while (epoch < 1500);
             train.finishTraining();
 
         }
@@ -158,23 +160,24 @@ public class FatorIntegrante extends AdvancedRobot {
         input = new double[]{normalize(enemy.getX(), min_x, max_x),
                 normalize(enemy.getY(), min_y, max_y),
                 normalize(enemy.getDistance(), min_dist, max_dist),
+                normalize(enemy.getVelocity(), min_speed, max_speed),
                 normalize(enemy.getHeading(), min_heading, max_heading),
                 normalize(bulletTravelTime, min_time, max_time)};;
 
-        //this.genDataSet(bulletTravelTime);
+//        genDataSet(bulletTravelTime);
         if(delta == 0d){
             targetDelta = bulletTravelTime;
             inputs.add(input);
         }
 
         delta = delta + (getTime()-time);
-        time = getTime();
 
         if (delta >= targetDelta){
             out = new double[]{normalize(enemy.getX(), min_x, max_x),normalize(enemy.getY(), min_y, max_y)};
             outs.add(out);
             delta = 0d;
         }
+        time = getTime();
 
         MLData data = new BasicMLData(input);
         MLData output = network.compute(data);
@@ -371,7 +374,7 @@ public class FatorIntegrante extends AdvancedRobot {
     private void genDataSet(double bulletTravelTime){
         if(delta == 0d){
             targetDelta = bulletTravelTime;
-            specs = String.format("%f", enemy.getX()) + "," + String.format("%f", enemy.getY())  + "," +  String.format("%f", enemy.getDistance()) + "," + String.format("%f", enemy.getHeading()) + ","+ String.format("%f", bulletTravelTime) + ",";
+            specs = String.format("%f", enemy.getX()) + "," + String.format("%f", enemy.getY())  + "," +  String.format("%f", enemy.getDistance()) + "," + String.format("%f", enemy.getVelocity()) + ","+ String.format("%f", enemy.getHeading()) + ","+ String.format("%f", bulletTravelTime) + ",";
         }
 
         delta = delta + (getTime()-time);
