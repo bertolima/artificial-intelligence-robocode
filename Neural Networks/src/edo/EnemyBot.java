@@ -50,6 +50,7 @@ public class EnemyBot extends AdvancedRobot {
     }
 
     public void setEnergy(double energy) {
+        this.prev_energy = this.energy;
         this.energy = energy;
     }
 

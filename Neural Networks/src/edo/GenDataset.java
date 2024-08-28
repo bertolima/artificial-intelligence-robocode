@@ -8,9 +8,10 @@ import robocode.control.RobotSpecification;
 import java.io.File;
 
 public class GenDataset {
-    public static final int NUMBER_OF_ROUNDS = 50000;
+    public static final int NUMBER_OF_ROUNDS = 10000;
     public static int robotScore,enemyScore;
-    public static final String trainingRobots = "edo.FatorIntegrante*,sample.Interactive";
+    public static final String trainingRobots = "edo.FatorIntegrante*,";
+    public static final String[] enemys = {"sample.Interactive", "sample.Walls", "darkcanuck.Pris 0.92", "sample.SpinBot", "sample.VelociRobot"};
     public static final String robocodePath = "/home/luis/workspace/java/robocode";
 
     public static void main(String[] args) throws Exception {
@@ -21,7 +22,7 @@ public class GenDataset {
         File f = new File("train.csv");
         if(!f.exists()) {
             CreateFile.main("train.csv");
-            Writer.main("train.csv", "x,y,dist,head,time,fX,fY\n");
+            Writer.main("train.csv", "myX,myY,waveX,waveY,vel,head,dire,dist,bearing,fX,fY\n");
         }
 
         RobocodeEngine engine = new RobocodeEngine(new java.io.File(robocodePath));
@@ -29,7 +30,7 @@ public class GenDataset {
         engine.setVisible(false);
 
         BattlefieldSpecification battlefield = new BattlefieldSpecification(800, 600);
-        RobotSpecification[] selectedRobots = engine.getLocalRepository(trainingRobots);
+        RobotSpecification[] selectedRobots = engine.getLocalRepository(((trainingRobots+enemys[2])));
         BattleSpecification battleSpec = new BattleSpecification(NUMBER_OF_ROUNDS, battlefield, selectedRobots);
 
         engine.runBattle(battleSpec, true);

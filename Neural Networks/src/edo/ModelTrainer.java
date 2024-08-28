@@ -2,7 +2,12 @@ package edo;
 
 import org.encog.ml.data.MLDataSet;
 import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.versatile.sources.CSVDataSource;
+import org.encog.ml.factory.MLMethodFactory;
+import org.encog.ml.model.EncogModel;
+import org.encog.ml.fitting.linear.LinearRegression;
 import org.encog.neural.networks.training.propagation.sgd.StochasticGradientDescent;
+import org.encog.neural.networks.training.propagation.back.Backpropagation;
 import org.encog.util.csv.CSVFormat;
 import org.encog.util.simple.TrainingSetUtil;
 import org.encog.Encog;
@@ -23,33 +28,32 @@ public class ModelTrainer {
 
     public static void main(final String args[]) {
 
-        final MLDataSet df = TrainingSetUtil.loadCSVTOMemory(CSVFormat.ENGLISH,
-                "/home/luis/workspace/java/artificial-intelligence-robocode/Neural Networks/normalized_df.csv", false, 6, 2);
-//
-//         create a neural network, without using a factory
+        final MLDataSet df = TrainingSetUtil.loadCSVTOMemory(CSVFormat.DECIMAL_POINT,
+                "/home/luis/workspace/java/artificial-intelligence-robocode/Neural Networks/normalized_df1.csv", false, 9, 2);
         BasicNetwork network = new BasicNetwork();
-        network.addLayer(new BasicLayer(null,true,6));
-        network.addLayer(new BasicLayer(new ActivationReLU(),true,36));
-        network.addLayer(new BasicLayer(new ActivationReLU(),true,12));
-        network.addLayer(new BasicLayer(null,true,2));
+        network.addLayer(new BasicLayer(null,false,9));
+        network.addLayer(new BasicLayer(new ActivationReLU(),true,54));
+        network.addLayer(new BasicLayer(new ActivationReLU(),true,18));
+        network.addLayer(new BasicLayer(null,false,2));
         network.getStructure().finalizeStructure();
         network.reset();
 
         // train the neural network
-        final StochasticGradientDescent  train = new StochasticGradientDescent (network, df);
-        train.setLearningRate(0.00001d);
+        final StochasticGradientDescent train = new StochasticGradientDescent (network, df);
+        train.setLearningRate(0.0001);
 
         int epoch = 1;
-
+        double lossSum = 0d;
         do {
             train.iteration();
             if(epoch % 1000 == 0)System.out.println("Epoch #" + epoch + " Error:" + train.getError());
-            Writer.main("loss_vector.csv", String.format("%.12f", train.getError()) + "\n");
+            Writer.main("loss_vector4.csv", String.format("%.12f", train.getError()) + "\n");
             epoch++;
+            lossSum += train.getError();
         } while (train.getError() > 0.00000001);
         train.finishTraining();
 //
-        String filename = "network1.eg";
+        String filename = "network6.eg";
 //
 // save network...
         saveObject(new File(filename), network);

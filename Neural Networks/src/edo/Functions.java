@@ -87,7 +87,7 @@ public class Functions {
         double offsetAngle = (getAbsoluteBearing(w.fireLocation, targetLocation)- w.directAngle);
         double factor = Utils.normalRelativeAngle(offsetAngle)/getMaxScapeAngle(w.bulletVelocity) * w.direction;
 
-        return (int)getLimit(0, (factor * ((bins - 1) / 2)) + ((bins - 1) / 2),bins - 1);
+        return (int)getLimit((factor * ((bins - 1) / 2)) + ((bins - 1) / 2),0,bins - 1);
     }
 
 
